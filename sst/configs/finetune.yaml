@@ -9,7 +9,7 @@ training:
   opt:
     opt_name: adam
   lr: 0.003
-  num_workers: 4
+  num_workers: 8
   shuffle: True
   tensorboard_logdir: /opt/ml/model
 dataset:
@@ -39,6 +39,3 @@ frontend:
   use_augmentations: False
 docker:
   outdir: /opt/ml/model
-
-
-

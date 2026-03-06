@@ -114,8 +114,7 @@ class FrontEndNoAug(nn.Module):
             n_fft=self.config.n_fft, 
             hop_length=self.config.hop_length,
             window_fn=torch.hann_window, 
-            power=None, 
-            return_complex=True
+            power=None
             )
         self.melscale = ta.transforms.MelScale(
             sample_rate=self.config.sr, 

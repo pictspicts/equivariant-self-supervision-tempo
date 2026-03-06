@@ -44,7 +44,7 @@ class ResidualBlock(nn.Module):
             dilation=self.dilation_rate, 
             padding=self.padding
             )
-        self.spatial_dropout = nn.Dropout2d(p=self.dropout_rate)
+        self.spatial_dropout = nn.Dropout1d(p=self.dropout_rate)
         self.conv1x1 = nn.Conv1d(
             self.num_filters,
             self.num_filters,1, 

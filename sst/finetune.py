@@ -7,6 +7,7 @@ import os
 from time import time
 from datetime import datetime
 import argparse
+import tqdm
 
 import numpy as np
 import torch
@@ -84,7 +85,8 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
     for epoch in range(config.training.epochs):
         running_loss = 0.0
         running_one_correct = []
-        for i, data in enumerate(train_loader):
+        pbar = tqdm.tqdm(enumerate(train_loader), total=len(train_loader), desc=f'Epoch {epoch+1}/{config.training.epochs}')
+        for i, data in pbar:
             # get the inputs; data is a list of [inputs, labels]
             inputs, tempi = data[0].to(device), data[1].to(device)
         
@@ -104,8 +106,9 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
             loss = criterion(outputs, labels_cls_idx.to(device))
             loss.backward()
             optimizer.step()
-            # print statistics
-            print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, loss.item()))
+            
+            # Update progress bar
+            pbar.set_postfix({'loss': f'{loss.item():.3f}', 'acc': f'{np.mean(one_correct):.3f}'})
 
             writer.add_scalar('Loss_batch/train', loss.item(), n_batches)
             n_batches += 1
@@ -124,7 +127,8 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
             with torch.no_grad():
                 total_val_loss = 0
                 one_correct_val = []
-                for i, data in enumerate(val_loader):
+                pbar_val = tqdm.tqdm(enumerate(val_loader), total=len(val_loader), desc='Validating', leave=False)
+                for i, data in pbar_val:
                     # get the inputs; data is a list of [inputs, labels]
                     inputs, tempi = data[0].to(device), data[1].to(device)
 
@@ -140,8 +144,8 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
                     outputs_mirex = softmax_to_mirex(F.softmax(outputs, dim=1))
                     _, one_correct, _ = tempo_eval_basic_batch(labels_mirex, outputs_mirex)
                     one_correct_val.extend(one_correct)
-                    # print statistics
-                    print('[%d, %5d] Val loss: %.3f' % (epoch + 1, i + 1, loss.item()))
+                    
+                    pbar_val.set_postfix({'val_loss': f'{loss.item():.3f}'})
                 avg_val_loss = total_val_loss / (i + 1)
                 avg_val_one_correct = np.mean(one_correct_val)
 
@@ -255,10 +259,10 @@ if __name__ == "__main__":
         add_proj_head=config.model.add_proj_head, 
         proj_head_dim=config.model.proj_head_dim
         )
-    pre_trained_model.load_state_dict(torch.load(model_data.model_filepath, map_location=device))
-    # Set forward hook to get output of the dense layer before regression (1 unit) output. 
-    feat_getter = FeatureExtractor(pre_trained_model, layers=['tempo_block.dense'])
-    model = ClassModel(feat_getter, feature_layer='tempo_block.dense', input_units=16, output_units=300)
+    pre_trained_model.load_state_dict(torch.load(model_data.model_filepath, map_location=device, weights_only=True))
+    # Set forward hook to get final output z (1 unit). 
+    feat_getter = FeatureExtractor(pre_trained_model, layers=['tempo_block'])
+    model = ClassModel(feat_getter, feature_layer='tempo_block', input_units=1, output_units=300)
 
     summary(model, (1, 81,1361), depth=3)
     model.to(device)

@@ -183,10 +183,10 @@ if __name__ == "__main__":
         proj_head_dim=config.model.proj_head_dim
         )
 
-    feat_getter = FeatureExtractor(pre_trained_model, layers=['tempo_block.dense'])
-    model = ClassModel(feat_getter, feature_layer='tempo_block.dense', input_units=16, output_units=300)
+    feat_getter = FeatureExtractor(pre_trained_model, layers=['tempo_block'])
+    model = ClassModel(feat_getter, feature_layer='tempo_block', input_units=1, output_units=300)
 
-    model.load_state_dict(torch.load(model_data.model_filepath, map_location=device))
+    model.load_state_dict(torch.load(model_data.model_filepath, map_location=device, weights_only=True))
     model.eval()
 
     summary(model, (1, 81,1361), depth=3)
