@@ -1,3 +1,9 @@
 
 .DS_Store
 *__pycache__*
+datasets_folder/
+datasets_folder.zip
+output/
+output_finetune/
+pretrained_model/
+eval_results/

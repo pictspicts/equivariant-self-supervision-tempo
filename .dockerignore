@@ -1,6 +1,9 @@
-.DS_Store
+cat <<EOF > .dockerignore
+datasets_folder/
+output/
+output_finetune/
 .git
 .gitignore
+.DS_Store
 sst_diagram.png
-Dockerfile
-Makefile
+EOF
