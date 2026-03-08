@@ -1,13 +1,13 @@
 config_basename: eval
 tmp_dir: /opt/ml/code
-pretrained_model_dir: /opt/ml/pretrained_model
+pretrained_model_dir: /opt/ml/code/pretrained_model
 eval:
   tempo_tol: 0.04
-  reduction: 'mean'
+  reduction: "mean"
 dataset:
-  basedir: /opt/ml/input/data/training/
+  basedir: /opt/ml/code/datasets_folder
   indexes:
-    - ../datasets_indexes/gtzan.json
+    - /opt/ml/code/datasets_indexes/gtzan.json
   num_workers: 4
   sr: 44100
   model_input_num_samples: 600000
@@ -26,7 +26,4 @@ dataset:
 frontend:
   use_augmentations: False
 docker:
-  outdir: /opt/ml/model
-
-
-
+  outdir: /opt/ml/code/sst/pretrained_model

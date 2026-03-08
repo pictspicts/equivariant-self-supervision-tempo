@@ -23,5 +23,11 @@ eval:
 eval-gpu:
 	docker run -v $(dataset_dir):"/opt/ml/input/data/training/" -v $(pretrained_model_dir):"/opt/ml/pretrained_model/" -v $(output_dir):"/opt/ml/model/" --gpus all ${TAG} eval.py
 
+visualize:
+	docker run -v $(dataset_dir):"/opt/ml/input/data/training/" -v $(pretrained_model_dir):"/opt/ml/pretrained_model/" -v $(output_dir):"/opt/ml/model/" ${TAG} visualize_z.py
+
+visualize-gpu:
+	docker run -v $(dataset_dir):"/opt/ml/input/data/training/" -v $(pretrained_model_dir):"/opt/ml/pretrained_model/" -v $(output_dir):"/opt/ml/model/" --gpus all ${TAG} visualize_z.py
+
 cleanup:
 	docker rmi -f ${TAG}

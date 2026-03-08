@@ -110,6 +110,16 @@ make eval-gpu dataset_dir="<path_to_your_local_datasets_folder>" pretrained_mode
 Without GPU:
 ```
 make eval dataset_dir="<path_to_your_local_datasets_folder>" pretrained_model_dir="<path_to_your_local_pretrained_model_folder>" output_dir="<path_to_your_local_output_folder>"
+
+4. Visualize pseudo-tempo z
+
+With GPU:
+```
+make visualize-gpu dataset_dir="<path_to_your_local_datasets_folder>" pretrained_model_dir="<path_to_your_local_pretrained_model_folder>" output_dir="<path_to_your_local_output_folder>"
+```
+Without GPU:
+```
+make visualize dataset_dir="<path_to_your_local_datasets_folder>" pretrained_model_dir="<path_to_your_local_pretrained_model_folder>" output_dir="<path_to_your_local_output_folder>"
 ```
 
 5. Cleanup

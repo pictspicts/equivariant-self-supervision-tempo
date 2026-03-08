@@ -21,5 +21,3 @@ COPY ./ /opt/ml/code/
 RUN pip install -e . #Install sst in editable mode.
 
 WORKDIR /opt/ml/code/sst/
-
-ENTRYPOINT ["python"]

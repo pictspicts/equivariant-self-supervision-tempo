@@ -1,7 +1,4 @@
 cat <<EOF > .dockerignore
-datasets_folder/
-output/
-output_finetune/
 .git
 .gitignore
 .DS_Store

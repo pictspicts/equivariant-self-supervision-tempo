@@ -6,3 +6,5 @@ tensorboard==2.4.0
 tensorboardX==2.1
 torch-summary==1.4.3
 protobuf==3.20.1
+matplotlib
+umap-learn
