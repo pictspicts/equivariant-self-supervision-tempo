@@ -1,6 +1,6 @@
 config_basename: eval
 tmp_dir: /opt/ml/code
-pretrained_model_dir: /opt/ml/code/pretrained_model
+pretrained_model_dir: /opt/ml/code/sst/pretrained_model/0309_1
 eval:
   tempo_tol: 0.04
   reduction: "mean"
@@ -26,4 +26,4 @@ dataset:
 frontend:
   use_augmentations: False
 docker:
-  outdir: /opt/ml/code/sst/pretrained_model
+  outdir: /opt/ml/code/sst/output_eval

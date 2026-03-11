@@ -1,0 +1,83 @@
+config_basename: eval
+training:
+  epochs: 100
+  loss: CrossEntropy
+  batch_size: 16
+  opt:
+    opt_name: adam
+  lr: 0.003
+  num_workers: 4
+  shuffle: true
+  checkpoint: false
+  tensorboard_logdir: /opt/ml/code/sst/tensorboard_logs
+dataset:
+  basedir: /opt/ml/code/datasets_folder
+  indexes:
+  - /opt/ml/code/datasets_indexes/gtzan.json
+  sr: 44100
+  random_excerpt: false
+  num_samples: null
+  start_sample: 0
+  downmix_to_mono: true
+  rseed: 2345
+  splits:
+    train: 0.8
+    val: 0.2
+    rseed: 42
+  use_augmentations: false
+  augmentations:
+  - pitch_shifting
+  aug_params:
+    pitch_shifting:
+      cent_min: -400
+      cent_max: 400
+    timestretch:
+      rate_min: 0.8
+      rate_max: 1.2
+  num_workers: 4
+  model_input_num_samples: 600000
+model:
+  model_name: TCN
+  mode: regression
+  num_filters: 16
+  dropout: 0.0
+  add_proj_head: false
+  proj_head_dim: 32
+frontend:
+  sr: 44100
+  n_fft: 2048
+  hop_length: 441
+  n_mels: 81
+  f_min: 30
+  f_max: 17000
+  power: 1
+  use_augmentations: false
+  augmentations:
+  - volume
+  - polarity_inversion
+  - gaussian_noise
+  - freq_masking
+  aug_params:
+    timestretch:
+      rate_min: 0.8
+      rate_max: 1.2
+    volume:
+      gain_min: -5.0
+      gain_max: 5.0
+    polarity_inversion:
+      prob: 0.5
+    gaussian_noise:
+      std_min: 0.0
+      std_max: 0.7
+    freq_masking:
+      mask_ratio_max: 0.2
+docker:
+  outdir: /opt/ml/code/sst/output_eval
+  checkpoint_dir: /opt/ml/code/sst/checkpoints
+run_name: eval1773021499.611797
+tmp_dir: /opt/ml/code
+pretrained_model_dir: /opt/ml/code/sst/output_finetune
+freeze_pretrained: true
+eval:
+  tempo_tol: 0.04
+  reduction: mean

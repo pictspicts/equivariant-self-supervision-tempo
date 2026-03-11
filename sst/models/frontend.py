@@ -8,6 +8,7 @@ Pre-processing front-end for all neural networks.
 import torch
 import torchaudio as ta
 import torch.nn as nn
+import torch.nn.functional as F
 
 from sst.augmentations import TimeStretchFixedSize, Vol, PolarityInversion, GaussianNoise
 
@@ -101,6 +102,13 @@ class FrontEndAug(nn.Module):
         # Compute log melspectrogram
         x = self.melscale(x)
         x = torch.log(x + EPS)
+        
+        # --- Compute Spectral Flux (Onset Envelope per band) ---
+        # 時間方向の差分を取り、減衰部分をゼロにする(ReLU)
+        flux = F.relu(x[:, :, 1:] - x[:, :, :-1])
+        # 時間軸の最後（または最初）が1フレーム減ってしまうので0パディングして整合させる
+        x = F.pad(flux, (1, 0))
+
         return x, y, ts_rate
 
 
@@ -136,6 +144,13 @@ class FrontEndNoAug(nn.Module):
         # Compute log melspectrogram
         x = self.melscale(x)
         x = torch.log(x + EPS)
+        
+        # --- Compute Spectral Flux (Onset Envelope per band) ---
+        # 時間方向の差分を取り、減衰部分をゼロにする(ReLU)
+        flux = F.relu(x[:, :, 1:] - x[:, :, :-1])
+        # 時間軸の最後（または最初）が1フレーム減ってしまうので0パディングして整合させる
+        x = F.pad(flux, (1, 0))
+        
         # Mock ts_rate, for consistency with FrontEndAug class.
         ts_rate = -1
         return x, y, ts_rate

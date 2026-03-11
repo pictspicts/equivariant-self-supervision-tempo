@@ -1,6 +1,6 @@
 config_basename: finetune
 tmp_dir: /opt/ml/code
-pretrained_model_dir: /opt/ml/pretrained_model
+pretrained_model_dir: /opt/ml/code/sst/output
 freeze_pretrained: True
 training:
   epochs: 100
@@ -11,9 +11,11 @@ training:
   lr: 0.003
   num_workers: 4
   shuffle: True
-  tensorboard_logdir: /opt/ml/model
+  tensorboard_logdir: /opt/ml/code/sst/tensorboard_logs
+  early_stopping_patience: 10
+  early_stopping_min_delta: 0.0001
 dataset:
-  basedir: /opt/ml/input/data/training/
+  basedir: /opt/ml/code/datasets_folder
   indexes:
     - ../datasets_indexes/ACM_mirum_tempo.json
     - ../datasets_indexes/giantsteps-tempo-dataset-master.json
@@ -38,7 +40,4 @@ dataset:
 frontend:
   use_augmentations: False
 docker:
-  outdir: /opt/ml/model
-
-
-
+  outdir: /opt/ml/code/sst/output_finetune

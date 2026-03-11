@@ -1,0 +1,2 @@
+pip install "numpy<1.24"
+apt install sox libsox-dev libsox-fmt-all

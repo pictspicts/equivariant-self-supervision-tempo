@@ -1,17 +1,19 @@
 config_basename: train
 training:
-  epochs: 10
+  epochs: 20
   loss: l1_ratio
   batch_size: 16
   opt:
     opt_name: adam
   lr: 0.001
-  num_workers: 4
+  num_workers: 8
   shuffle: True
   checkpoint: False
-  tensorboard_logdir: /opt/ml/model
+  tensorboard_logdir: /opt/ml/code/sst/tensorboard_logs/0309_1
+  early_stopping_patience: 5
+  early_stopping_min_delta: 0.0001
 dataset:
-  basedir: /opt/ml/input/data/training/
+  basedir: /opt/ml/code/datasets_folder
   indexes:
     - ../datasets_indexes/magnatagatune.json
   sr: 44100
@@ -26,7 +28,7 @@ dataset:
     rseed: 42
   use_augmentations: True
   augmentations:
-#    - pitch_shifting
+    #    - pitch_shifting
     - timestretch
   aug_params:
     pitch_shifting:
@@ -71,7 +73,5 @@ frontend:
     freq_masking:
       mask_ratio_max: 0.2
 docker:
-  outdir: /opt/ml/model
-  checkpoint_dir: /opt/ml/checkpoints
-
-
+  outdir: /opt/ml/code/sst/pretrained_model/0309_1
+  checkpoint_dir: /opt/ml/code/sst/checkpoints

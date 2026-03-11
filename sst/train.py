@@ -83,6 +83,13 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
     ################## Training loop ###################
     print('Training...')
     n_batches = 0
+    
+    # Early stopping setup
+    patience = config.training.get('early_stopping_patience', 0)
+    min_delta = config.training.get('early_stopping_min_delta', 0.0)
+    best_val_loss = float('inf')
+    early_stop_counter = 0
+    best_model_state = None
     for epoch in range(config.training.epochs):
         running_loss = 0.0
         for i, data in enumerate(train_loader):
@@ -160,6 +167,25 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
             checkpoint_basename = 'chekpoint_epoch_{}'.format(epoch)
             checkpoint_model_files(model, config, checkpoint_basename)
 
+        ####### Early Stopping #######
+        if val_loader is not None and patience > 0:
+            if avg_val_loss < best_val_loss - min_delta:
+                best_val_loss = avg_val_loss
+                early_stop_counter = 0
+                best_model_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+                print(f"Validation loss improved to {best_val_loss:.5f}.")
+            else:
+                early_stop_counter += 1
+                print(f"Validation loss did not improve. Early stopping counter: {early_stop_counter}/{patience}")
+                if early_stop_counter >= patience:
+                    print(f"Early stopping triggered at epoch {epoch + 1}!")
+                    break
+
+    # Restore best model before exiting if early stopping is enabled
+    if patience > 0 and best_model_state is not None:
+        model.load_state_dict(best_model_state)
+        print("Restored best model weights before returning.")
+
     # Record hparams and final metrics
     writer.flush()
     tensorboard_hparams = get_tensorboard_hparams(config)
@@ -210,8 +236,7 @@ if __name__ == "__main__":
 
 
     # Make output dir if not already exist
-    if not os.path.isdir(config.docker.outdir):
-        os.mkdir('/opt/ml/model')
+    os.makedirs(config.docker.outdir, exist_ok=True)
     # Make unique run_name based on timestamp
     config.run_name = config.config_basename + str(datetime.timestamp(datetime.now()))
 
