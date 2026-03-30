@@ -20,6 +20,8 @@ from dataloader_audiofiles import DatasetDualAug
 from models.tcn import TCN
 from sst.models.frontend import FrontEndAug, FrontEndNoAug
 from sst.losses.l1 import L1Ratio, L1Diff
+from sst.losses.shift_xent import ShiftInvariantCrossEntropy
+from sst.losses.equivariance_loss import EquivarianceLoss
 
 TEMPO_RANGE = (0,300)
 DEFAULT_CONFIG = './configs/train.yaml'
@@ -109,7 +111,7 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
             optimizer.step()
             # print statistics
             z_mag_mean = 0.5 * (torch.mean(torch.abs(z_i)) + torch.mean(torch.abs(z_j)))
-            print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, loss.item()))
+            print('[%d, %5d] loss: %.6f' % (epoch + 1, i + 1, loss.item()))
             writer.add_scalar('z_metrics_train/z_mag_mean', z_mag_mean.item(), n_batches)
             writer.add_scalar('z_metrics_train/tempo_loss', tempo_loss.item(), n_batches)
             writer.add_scalar('Loss_batch/train', loss.item(), n_batches)
@@ -147,11 +149,11 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
                     total_val_tempo_loss += tempo_loss.item()
 
                     # print statistics
-                    print('[%d, %5d] Val loss: %.3f' % (epoch + 1, i + 1, loss.item()))
+                    print('[%d, %5d] Val loss: %.6f' % (epoch + 1, i + 1, loss.item()))
                 avg_val_loss = total_val_loss / (i + 1)
                 avg_val_tempo_loss = total_val_tempo_loss / (i+1)
 
-                print('[%d, %5d] Avg val loss: %.3f' % (epoch + 1, i + 1, avg_val_loss))
+                print('[%d, %5d] Avg val loss: %.6f' % (epoch + 1, i + 1, avg_val_loss))
                 writer.add_scalar('Loss_epoch/val', avg_val_loss, epoch)
                 writer.add_scalar('Loss_epoch/val_tempo_loss', avg_val_tempo_loss, epoch)
 
@@ -272,6 +274,10 @@ if __name__ == "__main__":
         criterion = L1Ratio(reduction='mean')
     elif config.training.loss=='l1_diff':
         criterion = L1Diff(reduction='mean')
+    elif config.training.loss=='shift_xent':
+        criterion = ShiftInvariantCrossEntropy(num_classes=TEMPO_RANGE[1]-TEMPO_RANGE[0], tempo_min=20, tempo_max=TEMPO_RANGE[1], device=device)
+    elif config.training.loss=='equivariance':
+        criterion = EquivarianceLoss(num_classes=TEMPO_RANGE[1]-TEMPO_RANGE[0], tempo_min=20, tempo_max=TEMPO_RANGE[1], alpha=0.985, device=device)
 
     if config.training.opt.opt_name=='sgd':
         optimizer = optim.SGD(model.parameters(), lr=config.training.lr)
