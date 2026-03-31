@@ -7,27 +7,26 @@ training:
     opt_name: adam
   lr: 0.001
   num_workers: 6
-  shuffle: True
-  checkpoint: False
-  tensorboard_logdir: /opt/ml/code/tensorboard_logs/equ_2
+  shuffle: true
+  checkpoint: false
+  tensorboard_logdir: /opt/ml/code/tensorboard_logs/equ_1
 dataset:
   basedir: /opt/ml/code/datasets_folder
   indexes:
-    - ../datasets_indexes/magnatagatune.json
+  - ../datasets_indexes/magnatagatune.json
   sr: 44100
-  random_excerpt: True
+  random_excerpt: true
   num_samples: 600000
   start_sample: 0
-  downmix_to_mono: True
+  downmix_to_mono: true
   rseed: 2345
   splits:
     train: 0.8
     val: 0.2
     rseed: 42
-  use_augmentations: True
+  use_augmentations: true
   augmentations:
-    #    - pitch_shifting
-    - timestretch
+  - timestretch
   aug_params:
     pitch_shifting:
       cent_min: -400
@@ -40,7 +39,7 @@ model:
   mode: classification
   num_filters: 16
   dropout: 0.0
-  add_proj_head: False
+  add_proj_head: false
   proj_head_dim: 32
 frontend:
   sr: 44100
@@ -50,12 +49,12 @@ frontend:
   f_min: 30
   f_max: 17000
   power: 1
-  use_augmentations: True
+  use_augmentations: true
   augmentations:
-    - volume
-    - polarity_inversion
-    - gaussian_noise
-    - freq_masking
+  - volume
+  - polarity_inversion
+  - gaussian_noise
+  - freq_masking
   aug_params:
     timestretch:
       rate_min: 0.8
@@ -71,5 +70,6 @@ frontend:
     freq_masking:
       mask_ratio_max: 0.2
 docker:
-  outdir: /opt/ml/code/output/equ_2
+  outdir: /opt/ml/code/output/equ_1
   checkpoint_dir: /opt/ml/checkpoints
+run_name: train1774882912.915296

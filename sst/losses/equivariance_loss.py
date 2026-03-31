@@ -56,17 +56,20 @@ class EquivarianceLoss(nn.Module):
         phi_i = self._projection_phi(prob_i)
         phi_j = self._projection_phi(prob_j)
         
-        # 理想の理論値: jの分布は「iの分布を shift_logs マス分シフトさせたもの」であるはずなので、
-        # phi(j) は phi(i) の (alpha^shift_logs) 倍になるべきである。
-        # ※ビューを合わせるために squeeze しています
+        # 理想の理論値: phi(j) = alpha^k * phi(i)
+        # しかし、このまま差分を取ると、モデルが「常に一番右端のテンポ(alpha^300)等の
+        # 限りなくゼロに近い値を出力すれば、誤差もゼロになる」というズル(モード崩壊)をします。
+        # ズルを完全防止するため、両辺に対数(log)を取り、スケールに依存しない差分に変換します。
+        # log(phi_j) - log(phi_i) = k * log(alpha) となることを目指します。
+        
+        log_phi_i = torch.log(phi_i + 1e-8)
+        log_phi_j = torch.log(phi_j + 1e-8)
+        
         shift_k = shift_logs.squeeze(-1)
+        target_diff = shift_k * math.log(self.alpha) # Pytorch1.6+ なら自動的にGPUテンソルにブロードキャストされます
+        target_diff = target_diff.to(self.device).float()
         
-        # PythonのfloatをPytorchの32bitテンソルとして扱う
-        alpha_tensor = torch.tensor(self.alpha, dtype=torch.float32, device=self.device)
-        target_phi_j = (alpha_tensor ** shift_k) * phi_i
-        
-        # Huber Loss（Smooth L1 Loss）でペナルティを計算
-        # （大きな誤差にはL1、小さな誤差にはL2を適用する強健なロス関数）
-        loss = F.huber_loss(phi_j, target_phi_j, delta=1.0)
+        # モデルの予測した対数差分が、理論上のズレ（k * log(alpha)）と一致するかをペナルティ化
+        loss = F.huber_loss(log_phi_j - log_phi_i, target_diff, delta=1.0)
         
         return loss

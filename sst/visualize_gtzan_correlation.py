@@ -154,7 +154,9 @@ def visualize_gtzan():
     plt.grid(True, linestyle='--', alpha=0.6)
     
     # 保存
-    out_path = os.path.join(SCRIPT_DIR, 'gtzan_correlation.png')
+    outdir = config.docker.outdir if "docker" in config and "outdir" in config.docker else SCRIPT_DIR
+    os.makedirs(outdir, exist_ok=True)
+    out_path = os.path.join(outdir, 'gtzan_correlation.png')
     plt.savefig(out_path, bbox_inches='tight', dpi=150)
     print(f'Visualization saved to {out_path}')
 
