@@ -103,7 +103,30 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
             z_i = model(melspecs_i)
             z_j = model(melspecs_j)
 
-            tempo_loss = 0.5*(criterion(z_i, z_j, ts_rates_i, ts_rates_j) + criterion(z_j, z_i, ts_rates_j, ts_rates_i))
+            if config.training.loss == 'hybrid':
+                criterion_equiv, criterion_xent = criterion
+                # 計算: 等変性損失
+                L_eq_ij = criterion_equiv(z_i, z_j, ts_rates_i, ts_rates_j)
+                L_eq_ji = criterion_equiv(z_j, z_i, ts_rates_j, ts_rates_i)
+                L_eq = 0.5 * (L_eq_ij + L_eq_ji)
+                
+                # 計算: シフト交差エントロピー(正則化)
+                L_xe_ij = criterion_xent(z_i, z_j, ts_rates_i, ts_rates_j)
+                L_xe_ji = criterion_xent(z_j, z_i, ts_rates_j, ts_rates_i)
+                L_xe = 0.5 * (L_xe_ij + L_xe_ji)
+                
+                # 5:5 動的バランシング (L_xeをL_eqと同じスケールに合わせる)
+                w_xe = L_eq.detach() / (L_xe.detach() + 1e-8)
+                L_xe_scaled = w_xe * L_xe
+                
+                # 最終的な合成ロス (5:5の割合で足す)
+                tempo_loss = 0.5 * L_eq + 0.5 * L_xe_scaled
+                
+                writer.add_scalar('Loss_components/Equiv', L_eq.item(), n_batches)
+                writer.add_scalar('Loss_components/Xent_scaled', L_xe_scaled.item(), n_batches)
+            else:
+                tempo_loss = 0.5*(criterion(z_i, z_j, ts_rates_i, ts_rates_j) + criterion(z_j, z_i, ts_rates_j, ts_rates_i))
+            
             loss = tempo_loss
 
             loss.backward()
@@ -142,7 +165,22 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
                     z_i = model(melspecs_i)
                     z_j = model(melspecs_j)
 
-                    tempo_loss = 0.5*(criterion(z_i, z_j, ts_rates_i, ts_rates_j) + criterion(z_j, z_i, ts_rates_j, ts_rates_i))
+                    if config.training.loss == 'hybrid':
+                        criterion_equiv, criterion_xent = criterion
+                        L_eq_ij = criterion_equiv(z_i, z_j, ts_rates_i, ts_rates_j)
+                        L_eq_ji = criterion_equiv(z_j, z_i, ts_rates_j, ts_rates_i)
+                        L_eq = 0.5 * (L_eq_ij + L_eq_ji)
+                        
+                        L_xe_ij = criterion_xent(z_i, z_j, ts_rates_i, ts_rates_j)
+                        L_xe_ji = criterion_xent(z_j, z_i, ts_rates_j, ts_rates_i)
+                        L_xe = 0.5 * (L_xe_ij + L_xe_ji)
+                        
+                        w_xe = L_eq.detach() / (L_xe.detach() + 1e-8)
+                        L_xe_scaled = w_xe * L_xe
+                        tempo_loss = 0.5 * L_eq + 0.5 * L_xe_scaled
+                    else:
+                        tempo_loss = 0.5*(criterion(z_i, z_j, ts_rates_i, ts_rates_j) + criterion(z_j, z_i, ts_rates_j, ts_rates_i))
+                    
                     loss = tempo_loss
 
                     total_val_loss += loss.item()
@@ -278,6 +316,10 @@ if __name__ == "__main__":
         criterion = ShiftInvariantCrossEntropy(num_classes=TEMPO_RANGE[1]-TEMPO_RANGE[0], tempo_min=20, tempo_max=TEMPO_RANGE[1], device=device)
     elif config.training.loss=='equivariance':
         criterion = EquivarianceLoss(num_classes=TEMPO_RANGE[1]-TEMPO_RANGE[0], tempo_min=20, tempo_max=TEMPO_RANGE[1], alpha=0.985, device=device)
+    elif config.training.loss=='hybrid':
+        criterion_equiv = EquivarianceLoss(num_classes=TEMPO_RANGE[1]-TEMPO_RANGE[0], tempo_min=20, tempo_max=TEMPO_RANGE[1], alpha=0.985, device=device)
+        criterion_xent = ShiftInvariantCrossEntropy(num_classes=TEMPO_RANGE[1]-TEMPO_RANGE[0], tempo_min=20, tempo_max=TEMPO_RANGE[1], device=device)
+        criterion = (criterion_equiv, criterion_xent)
 
     if config.training.opt.opt_name=='sgd':
         optimizer = optim.SGD(model.parameters(), lr=config.training.lr)

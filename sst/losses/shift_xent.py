@@ -35,6 +35,8 @@ class ShiftInvariantCrossEntropy(nn.Module):
         ratio = ts_rate_j / ts_rate_i
         
         shift_logs = torch.log(ratio) / self.log_bin_width
+        shift_bins = torch.round(shift_logs).long().view(-1)
+        
         log_prob_i = F.log_softmax(z_i, dim=-1)
         prob_j = F.softmax(z_j, dim=-1)
         

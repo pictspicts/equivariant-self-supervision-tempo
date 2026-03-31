@@ -8,6 +8,8 @@ Pre-processing front-end for all neural networks.
 import torch
 import torchaudio as ta
 import torch.nn as nn
+import torch.nn.functional as F
+import math
 
 from sst.augmentations import TimeStretchFixedSize, Vol, PolarityInversion, GaussianNoise
 
@@ -83,14 +85,18 @@ class FrontEndAug(nn.Module):
             x = self.gauss_noise(x, std)
         # Complex spectrogram
         x = self.spectrogram_cx(x)
+        
+        # Decide Time-Stretch rate and update target labels (but don't use the phase vocoder here!)
+        ts_rate = -1.0
         if 'timestretch' in self.config.augmentations:
             ts_rate = self.draw_random_float_in_range(
                 self.config.aug_params.timestretch.rate_min, 
                 self.config.aug_params.timestretch.rate_max
                 )
-            x, y = self.timestretch(x, y, overriding_rate=ts_rate)
-        else:
-            ts_rate = -1
+            y = y * ts_rate
+            y[y < self.tempo_range[0]] = 0.0
+            y[y > self.tempo_range[1]] = 0.0
+            
         if self.config.power is not None:
             if self.config.power == 1.0:
                 x = x.abs()
@@ -101,6 +107,30 @@ class FrontEndAug(nn.Module):
         # Compute log melspectrogram
         x = self.melscale(x)
         x = torch.log(x + EPS)
+        
+        # --- NEW: Image-Based Artifact-Free Time Stretch ---
+        if ts_rate > 0:
+            original_len = x.shape[-1]
+            target_len = int(original_len / ts_rate)
+            
+            # Interpolate (resize) safely along the time dimension
+            x_stretched = F.interpolate(x, size=target_len, mode='linear', align_corners=False)
+            
+            # THE MAGIC FIX: Random crop to EXACTLY 1361 frames (equivalent to 600,000 samples)
+            # Since dataloader passed a super-sampled 780,000 samples, target_len is ALWAYS >= 1361.
+            window_size = 1361
+            if target_len > window_size:
+                # Randomly slide the window. This ensures no pad/cut artifacts exist.
+                # Also creates Translation-Invariance since x_i and x_j will get slightly different rhythmic phases!
+                start_max = target_len - window_size
+                start_idx = torch.randint(0, start_max + 1, (1,)).item()
+                x = x_stretched[..., start_idx : start_idx + window_size]
+            else:
+                # Safety fallback just in case someone sets rate_max > 1.3
+                pad_len = window_size - target_len
+                pad_val = math.log(EPS)
+                x = F.pad(x_stretched, (0, pad_len), "constant", pad_val)
+                
         return x, y, ts_rate
 
 
