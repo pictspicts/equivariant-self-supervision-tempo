@@ -27,7 +27,7 @@ dataset:
   use_augmentations: True
   augmentations:
     #    - pitch_shifting
-    - timestretch
+    # - timestretch  <-- [致命的エラーの原因] dataset層でのSoX波形処理ストップ！
   aug_params:
     pitch_shifting:
       cent_min: -400
@@ -56,6 +56,7 @@ frontend:
     - polarity_inversion
     - gaussian_noise
     - freq_masking
+    - timestretch    # <-- こちらに移動！(GPUでの超高速な無劣化画像ストレッチ)
   aug_params:
     timestretch:
       rate_min: 0.8

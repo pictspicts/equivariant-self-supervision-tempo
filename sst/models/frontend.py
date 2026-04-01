@@ -113,8 +113,9 @@ class FrontEndAug(nn.Module):
             original_len = x.shape[-1]
             target_len = int(original_len / ts_rate)
             
-            # Interpolate (resize) safely along the time dimension
-            x_stretched = F.interpolate(x, size=target_len, mode='linear', align_corners=False)
+            # 4Dテンソル (Batch, Channel, Mels, Time) に対してはbilinearを使用し、Mels軸のサイズを変えずに時間軸のみ伸縮する
+            x_stretched = F.interpolate(x, size=(x.shape[2], target_len), mode='bilinear', align_corners=False)
+
             
             # THE MAGIC FIX: Random crop to EXACTLY 1361 frames (equivalent to 600,000 samples)
             # Since dataloader passed a super-sampled 780,000 samples, target_len is ALWAYS >= 1361.
