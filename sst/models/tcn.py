@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-EPS = 10e-8
+EPS = 1e-8
 
 class ResidualBlock(nn.Module):
     def __init__(

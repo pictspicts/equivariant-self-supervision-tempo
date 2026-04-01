@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-EPS = 10e-8
+EPS = 1e-8
 # EPS = 0
 
 def general_crossentropy(outputs, targets, reduction='mean'):

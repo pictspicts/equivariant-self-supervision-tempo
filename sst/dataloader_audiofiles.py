@@ -85,7 +85,7 @@ class DatasetAudioFiles(Dataset):
 
     def _draw_random_float_in_range(self, value_min: float, value_max: float):
         '''Draw a random float value in range [value_min, value_max]'''
-        value_tensor = (value_min - value_max)*torch.rand(1) + value_max
+        value_tensor = (value_max - value_min)*torch.rand(1) + value_min
         return value_tensor.item()
 
     def _draw_sox_effects(self):
@@ -130,8 +130,7 @@ class DatasetAudioFiles(Dataset):
             - overriding_rate: (float) speed=up rate to apply'''
         y = y*ts_rate
         # Make sure the tempo after time stretching does not go out of range.
-        y[y < self.tempo_range[0]] = 0.0
-        y[y > self.tempo_range[1]] = 0.0
+        y = torch.clamp(y, min=self.tempo_range[0], max=self.tempo_range[1])
         return y
 
     def __len__(self):
@@ -158,27 +157,29 @@ class DatasetDualAug(DatasetAudioFiles):
     '''Loads two copies of each audio file, with two different augmentations.'''
 
     def __getitem__(self, idx):
-        # Check that that some activations are requested.
-        if self.config.use_augmentations==False:
-            return ValueError('This data loader is designed to be used with augmentations, but use_augmentation is not set to True in the dataset config')
-        if len(self.config.augmentations) < 1:
-            return ValueError('No augmentation specified. This data loader is designed to be used with augmentations, please specify at least one augmentation')
         # Load data
         example_obj = self.dataset_index[idx]
         filepath = os.path.join(self.config.basedir,example_obj["audio_filepath"])
         tempo = torch.Tensor([example_obj["tempo"]])
         audio = self._load_audio(filepath)
         audio.unsqueeze_(0) #add a channel dimension
+        
+        # If augmentations list is empty or None, just return clones (stretch will be done on GPU frontend)
+        if not self.config.augmentations or len(self.config.augmentations) < 1:
+            return (audio.clone(), tempo.clone(), 1.0), (audio.clone(), tempo.clone(), 1.0)
+            
         # Augmentations - set 1
         sox_effects_i, ts_rate_i = self._draw_sox_effects()
         sox_effects_j, ts_rate_j = self._draw_sox_effects()
-        if sox_effects_i != []:
-            audio_i = self._apply_sox_effects(audio, self.config.sr, sox_effects_i)
-        if sox_effects_j != []:
-            audio_j = self._apply_sox_effects(audio, self.config.sr, sox_effects_j)
-        if ts_rate_i != -1:
-            tempo_i = self.transform_y(tempo, ts_rate_i)
-        if ts_rate_j != -1:
-            tempo_j = self.transform_y(tempo, ts_rate_j)
+        
+        audio_i = self._apply_sox_effects(audio.clone(), self.config.sr, sox_effects_i) if sox_effects_i != [] else audio.clone()
+        audio_j = self._apply_sox_effects(audio.clone(), self.config.sr, sox_effects_j) if sox_effects_j != [] else audio.clone()
+        
+        tempo_i = self.transform_y(tempo, ts_rate_i) if ts_rate_i != -1 else tempo.clone()
+        tempo_j = self.transform_y(tempo, ts_rate_j) if ts_rate_j != -1 else tempo.clone()
+        
+        ts_rate_i = 1.0 if ts_rate_i == -1 else ts_rate_i
+        ts_rate_j = 1.0 if ts_rate_j == -1 else ts_rate_j
+        
         return (audio_i, tempo_i, ts_rate_i), (audio_j, tempo_j, ts_rate_j)
 

@@ -97,8 +97,13 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
             # zero the parameter gradients
             optimizer.zero_grad()
             # forward + backward + optimize
-            melspecs_i, _, _ = frontend(inputs_i, tempi_i)
-            melspecs_j, _, _ = frontend(inputs_j, tempi_j)
+            melspecs_i, _, ts_rates_i_front = frontend(inputs_i, tempi_i)
+            melspecs_j, _, ts_rates_j_front = frontend(inputs_j, tempi_j)
+            
+            if ts_rates_i_front > 0:
+                ts_rates_i = torch.full((melspecs_i.shape[0], 1), ts_rates_i_front, device=device)
+            if ts_rates_j_front > 0:
+                ts_rates_j = torch.full((melspecs_j.shape[0], 1), ts_rates_j_front, device=device)
 
             z_i = model(melspecs_i)
             z_j = model(melspecs_j)
@@ -174,8 +179,13 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
                     ts_rates_i = torch.unsqueeze(ts_rates_i, 1)
                     ts_rates_j = torch.unsqueeze(ts_rates_j, 1)
 
-                    melspecs_i, _, _ = frontend(inputs_i, tempi_i)
-                    melspecs_j, _, _ = frontend(inputs_j, tempi_j)
+                    melspecs_i, _, ts_rates_i_front = frontend(inputs_i, tempi_i)
+                    melspecs_j, _, ts_rates_j_front = frontend(inputs_j, tempi_j)
+
+                    if ts_rates_i_front > 0:
+                        ts_rates_i = torch.full((melspecs_i.shape[0], 1), ts_rates_i_front, device=device)
+                    if ts_rates_j_front > 0:
+                        ts_rates_j = torch.full((melspecs_j.shape[0], 1), ts_rates_j_front, device=device)
 
                     z_i = model(melspecs_i)
                     z_j = model(melspecs_j)
@@ -211,7 +221,7 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
 
         ####### Checkpoint model #######
         if config.training.checkpoint:
-            checkpoint_basename = 'chekpoint_epoch_{}'.format(epoch)
+            checkpoint_basename = 'checkpoint_epoch_{}'.format(epoch)
             checkpoint_model_files(model, config, checkpoint_basename)
 
     # Record hparams and final metrics

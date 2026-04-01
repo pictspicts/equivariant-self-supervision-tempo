@@ -62,8 +62,8 @@ class EquivarianceLoss(nn.Module):
         # ズルを完全防止するため、両辺に対数(log)を取り、スケールに依存しない差分に変換します。
         # log(phi_j) - log(phi_i) = k * log(alpha) となることを目指します。
         
-        log_phi_i = torch.log(phi_i + 1e-8)
-        log_phi_j = torch.log(phi_j + 1e-8)
+        log_phi_i = torch.log(torch.clamp(phi_i, min=1e-8))
+        log_phi_j = torch.log(torch.clamp(phi_j, min=1e-8))
         
         shift_k = shift_logs.squeeze(-1)
         target_diff = shift_k * math.log(self.alpha) # Pytorch1.6+ なら自動的にGPUテンソルにブロードキャストされます

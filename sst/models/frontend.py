@@ -13,7 +13,7 @@ import math
 
 from sst.augmentations import TimeStretchFixedSize, Vol, PolarityInversion, GaussianNoise
 
-EPS = 10e-8
+EPS = 1e-8
 
 
 class AugParams:
@@ -35,10 +35,11 @@ class FrontEndAug(nn.Module):
 
         # Complex Spectrogram Pre-processing
         self.spectrogram_cx = ta.transforms.Spectrogram(
-            n_fft=self.config.n_fft, 
-            hop_length=self.config.hop_length, 
+            n_fft=self.config.n_fft,
+            hop_length=self.config.hop_length,
             window_fn=torch.hann_window,
-            power=None
+            power=None,
+            return_complex=True
             )
         self.melscale = ta.transforms.MelScale(
             sample_rate=self.config.sr, 
@@ -57,12 +58,12 @@ class FrontEndAug(nn.Module):
         self.freq_masking = ta.transforms.FrequencyMasking(freq_mask_param=self.freq_mask_param)
 
     def draw_timestretch_rate(self, rate_min=0.8, rate_max=1.2):
-        rate_tensor = (rate_min - rate_max)*torch.rand(1) + rate_max
+        rate_tensor = (rate_max - rate_min)*torch.rand(1) + rate_min
         return rate_tensor.item()
 
     def draw_random_float_in_range(self, value_min: float, value_max: float):
         '''Draw a random float value in range [value_min, value_max]'''
-        value_tensor = (value_min - value_max)*torch.rand(1) + value_max
+        value_tensor = (value_max - value_min)*torch.rand(1) + value_min
         return value_tensor.item()
 
     def forward(self, x, y):
@@ -79,8 +80,8 @@ class FrontEndAug(nn.Module):
                 x = self.pol_inv(x)
         if 'gaussian_noise' in self.config.augmentations:
             std = self.draw_random_float_in_range(
-                self.config.aug_params.gaussian_noise.std_min, 
-                self.config.aug_params.gaussian_noise.std_min
+                self.config.aug_params.gaussian_noise.std_min,
+                self.config.aug_params.gaussian_noise.std_max
                 )
             x = self.gauss_noise(x, std)
         # Complex spectrogram
@@ -94,8 +95,7 @@ class FrontEndAug(nn.Module):
                 self.config.aug_params.timestretch.rate_max
                 )
             y = y * ts_rate
-            y[y < self.tempo_range[0]] = 0.0
-            y[y > self.tempo_range[1]] = 0.0
+            y = torch.clamp(y, min=self.tempo_range[0], max=self.tempo_range[1])
             
         if self.config.power is not None:
             if self.config.power == 1.0:

@@ -57,11 +57,10 @@ class ShiftInvariantCrossEntropy(nn.Module):
             elif shift_to_match_i < 0:
                 shifted_prob_j[b, shift_to_match_i:] = 0.0
                 
-        # Re-normalize to ensure the remaining probabilities sum to 1
-        sum_p = shifted_prob_j.sum(dim=-1, keepdim=True)
-        # Avoid division by zero if all mass was masked out
-        shifted_prob_j = shifted_prob_j / (sum_p + 1e-8)
-        
+        # Do NOT re-normalize: the masked distribution is used as-is so that
+        # samples whose shift pushes most mass out of range contribute less loss,
+        # which is the correct behaviour (less valid signal = less penalty).
+
         # Cross entropy: H(P_target, P_pred) = - \sum P_target * \log P_pred
         # Using shifted_prob_j as target for log_prob_i
         loss = -torch.sum(shifted_prob_j * log_prob_i, dim=-1).mean()

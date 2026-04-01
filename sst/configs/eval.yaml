@@ -1,6 +1,6 @@
 config_basename: eval
 tmp_dir: /opt/ml/code
-pretrained_model_dir: /opt/ml/code/pretrained_model
+pretrained_model_dir: /opt/ml/code/output/equ_xent_3
 eval:
   tempo_tol: 0.04
   reduction: "mean"
@@ -26,4 +26,4 @@ dataset:
 frontend:
   use_augmentations: False
 docker:
-  outdir: /opt/ml/code/output_eval/pretrained_model
+  outdir: /opt/ml/code/output_eval/equ_xent_3

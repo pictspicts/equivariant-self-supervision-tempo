@@ -10,7 +10,7 @@ from typing import Dict, Iterable, Callable
 import torch
 import torch.nn as nn
 
-EPS = 10e-8
+EPS = 1e-8
 
 
 class LinTransformModel(nn.Module):
@@ -89,8 +89,16 @@ class ClassModel(nn.Module):
         self.output_units = output_units
         self.class_head = ClassificationHead(input_units=self.input_units, output_units=self.output_units)
         self.freeze_feat_extractor = freeze_feat_extractor
-        if self.freeze_feat_extractor==True:
+        if self.freeze_feat_extractor:
+            for param in self.feature_extractor.parameters():
+                param.requires_grad = False
             self.feature_extractor.eval()
+
+    def train(self, mode=True):
+        super().train(mode)
+        if self.freeze_feat_extractor:
+            self.feature_extractor.eval()
+        return self
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.feature_extractor(x)[self.feature_layer]
