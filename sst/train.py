@@ -115,15 +115,30 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
                 L_xe_ji = criterion_xent(z_j, z_i, ts_rates_j, ts_rates_i)
                 L_xe = 0.5 * (L_xe_ij + L_xe_ji)
                 
-                # 5:5 動的バランシング (L_xeをL_eqと同じスケールに合わせる)
-                w_xe = L_eq.detach() / (L_xe.detach() + 1e-8)
-                L_xe_scaled = w_xe * L_xe
+                # --- PESTO方式: 勾配(GradNorm)を用いた動的バランシング ---
+                # 最終レイヤーの取得 (データ並列化等のラップも考慮)
+                if hasattr(model, 'module'):
+                    last_layer = model.module.tempo_block.output.weight
+                else:
+                    last_layer = model.tempo_block.output.weight
+
+                # それぞれのロスの「ネットワークを更新しようとする力（勾配のL2ノルム）」を測定
+                grad_eq = torch.autograd.grad(L_eq, last_layer, retain_graph=True)[0].norm().detach()
+                grad_xe = torch.autograd.grad(L_xe, last_layer, retain_graph=True)[0].norm().detach()
                 
-                # 最終的な合成ロス (5:5の割合で足す)
-                tempo_loss = 0.5 * L_eq + 0.5 * L_xe_scaled
+                # 勾配の強さがデカいロスほどウェイトを下げ、弱いロスほどウェイトを上げる (合計が1になる)
+                total_grad = grad_eq + grad_xe + 1e-8
+                w_eq = 1.0 - (grad_eq / total_grad)
+                w_xe = 1.0 - (grad_xe / total_grad)
                 
+                # 最終的な合成ロス (PESTO流)
+                tempo_loss = w_eq * L_eq + w_xe * L_xe
+                
+                # Tensorboard ロギング
                 writer.add_scalar('Loss_components/Equiv', L_eq.item(), n_batches)
-                writer.add_scalar('Loss_components/Xent_scaled', L_xe_scaled.item(), n_batches)
+                writer.add_scalar('Loss_components/Xent', L_xe.item(), n_batches)
+                writer.add_scalar('Weights/w_eq', w_eq.item(), n_batches)
+                writer.add_scalar('Weights/w_xe', w_xe.item(), n_batches)
             else:
                 tempo_loss = 0.5*(criterion(z_i, z_j, ts_rates_i, ts_rates_j) + criterion(z_j, z_i, ts_rates_j, ts_rates_i))
             
@@ -175,9 +190,8 @@ def train(model, frontend, criterion, optimizer, train_loader, config, val_loade
                         L_xe_ji = criterion_xent(z_j, z_i, ts_rates_j, ts_rates_i)
                         L_xe = 0.5 * (L_xe_ij + L_xe_ji)
                         
-                        w_xe = L_eq.detach() / (L_xe.detach() + 1e-8)
-                        L_xe_scaled = w_xe * L_xe
-                        tempo_loss = 0.5 * L_eq + 0.5 * L_xe_scaled
+                        # Validationは no_grad 環境下であるため、純粋な生ロス値(5:5)でメトリクスを評価
+                        tempo_loss = 0.5 * L_eq + 0.5 * L_xe
                     else:
                         tempo_loss = 0.5*(criterion(z_i, z_j, ts_rates_i, ts_rates_j) + criterion(z_j, z_i, ts_rates_j, ts_rates_i))
                     
