@@ -9,7 +9,7 @@ training:
   num_workers: 6
   shuffle: True
   checkpoint: False
-  tensorboard_logdir: /opt/ml/code/tensorboard_logs/equ_xent_3
+  tensorboard_logdir: /opt/ml/code/tensorboard_logs/equ_xent_4
 dataset:
   basedir: /opt/ml/code/datasets_folder
   indexes:
@@ -72,5 +72,5 @@ frontend:
     freq_masking:
       mask_ratio_max: 0.2
 docker:
-  outdir: /opt/ml/code/output/equ_xent_3
+  outdir: /opt/ml/code/output/equ_xent_4
   checkpoint_dir: /opt/ml/checkpoints
